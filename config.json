@@ -1,1 +1,1 @@
-{"nactors": 3, "niter": 3, "nvars": 2, "output_path": "protocol.dat", "net_output_path": "net.bin"}
+{"nactors": 100, "niter": 100, "nvars": 2, "output_path": "protocol.dat", "net_output_path": "net.bin"}
