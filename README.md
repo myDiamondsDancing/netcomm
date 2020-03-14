@@ -1,4 +1,4 @@
-`experiment_script.py models changing of public opinion, based on some values.
+`experiment_script.py` models changing of public opinion, based on some values.
 
 To control this script, change config.json. This file contains next fields:
 
