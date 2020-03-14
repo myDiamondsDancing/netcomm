@@ -4,13 +4,13 @@
 * My Numpy version is 1.16.4
 * My NetworkX version is 2.4
 
-My task is to use multyprocess unit for `experiment_script.py` for faster work of this script. Watch this script before reading this.
+My task is to use multyprocess unit for `experiment_script.py` to make script work faster. Watch this script before reading this.
 
 Firstly, I want to analyze script and find errors.
 
 ## Numpy and other flaws in the code
 
-The first error is using `np.random.default_range()`. In version 1.16.4 I got `AttributeError`. Let's see it:
+The first error is using `np.random.default_range()`. In version 1.16.4 I got `AttributeError`. Let's look at it:
 ```python
 import numpy as np
 
@@ -75,7 +75,7 @@ for channel in net.edges:
             rg.uniform(low=0.2, high=0.6)
         )
 ```
-I don't need to define `net.edges[channel]['a']` in if/else, because I can define it before if/else construction thus:
+I don't need to define `net.edges[channel]['a']` in if/else, because I can define it before if/else construction, thus:
 ```python
 # set parameters of community channels
 for channel in net.edges:
@@ -93,7 +93,7 @@ for channel in net.edges:
             rg.uniform(low=0.2, high=0.6)
         )
 ```
-To open logging file, I'm going to use `with\as`. Opening file with `open()` and then `file.close()` is bad practise, as `PEP8` says. So, file's opening looks like this:
+To open logging file, I'm going to use `with\as`. Opening file with `open()` and then `file.close()` is bad practice, as `PEP8` says. So, file's opening looks like this:
 ```python
 with open("protocol.dat", "w") as out_file:
     # out_file.write(str(net.nvars) + "\n")
@@ -108,7 +108,7 @@ with open("protocol.dat", "w") as out_file:
 
 ## Multiprocessing
 
-I should use module, called multiprocessing to ignore GIL and speed up this script. I want to use `Process()` class, which uses arguments called `target`(function) and `args`(tuple). But I had one problem: I couldn't change global variable like NetworkX graph or simple list, so I defined two `mp.Manager.list` for saving nodes and edges of "net". So, I "removed" NetworkX from this script (see below).
+I should use module, called multiprocessing to ignore GIL and speed up the script. I want to use `Process()` class, which uses arguments called `target`(function) and `args`(tuple). But I had one problem: I couldn't change global variable like NetworkX graph or simple list, so I defined two `mp.Manager.list` for saving nodes and edges of "net". So, I "removed" NetworkX from this script (see below).
 
 ```python
 # multiprocessing manager
@@ -171,7 +171,7 @@ def set_params_channel(channel:tuple, edges, lock:mp.Lock) -> None:
         lock.release()
 ```
 
-How you can see, I used `mp.Lock` as argument of each function. I did this, because threads can conflict with each other, and the best way to fix it is to use `mp.Lock` and `Process.join()`. You'll see it below, when I'll show calls of functions with `Process()`.
+How you can see, I used `mp.Lock` as argument of each function. I did this, because threads can conflict with each other, and the best way to fix it is to use `mp.Lock` and `Process.join()`. You can see it below, when I show calls of functions with `Process()`.
 
 Then I defined function for simulating dialog between two actors:
 ```python
@@ -195,7 +195,7 @@ def simulate_dialog(alice:int, bob:int, nodes, edges) -> tuple:
     return wA_result, wB_result
 ```
 
-Then I defined two functions, used in simulating session. These are simulating session for current channel and computing previous results for each actor:
+Next I defined two functions, used in simulating session. These are simulating session for current channel and computing previous results for each actor:
 ```python
 def simulate_session_ch(channel:tuple, nodes, edges, lock:mp.Lock) -> None:
     '''This function simulates session for current channel.'''
@@ -253,7 +253,7 @@ def compute_previous_result(n:int, nodes, edges, lock:mp.Lock) -> None:
         lock.release()   
  ```
  
- So, then I defined function for simulating session, where I called these two functions with `Process()`:
+ Further I defined function for simulating session, where I called these two functions with `Process()`:
  ```python
  def compute_previous_result(n:int, nodes, edges, lock:mp.Lock) -> None:
     '''This function computes previous result for current actor.'''
@@ -361,7 +361,7 @@ def observation(nodes, edges, lock:mp.Lock) -> tuple:
     DP /= nactors
     return W, DP, WP
 ```
-In this function, I'm calling `pol_simulation` function with `Process()` and calculating the necessary values.
+In this function, I'm calling `pol_simulation` function with `Process()` and calculating necessary values.
 
 It's time to set up the experiment!
 
