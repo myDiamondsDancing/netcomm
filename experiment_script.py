@@ -55,6 +55,7 @@ def set_params_channel(channel:tuple, edges, lock:mp.Lock) -> None:
     '''This function sets parameters for current edge in net.'''
 
     lock.acquire()
+    
     try:
         params = dict()
         alice = channel[0]
@@ -115,7 +116,7 @@ def simulate_session_ch(channel:tuple, nodes, edges, lock:mp.Lock) -> None:
         # simulated dialog
         wA, wB = simulate_dialog(alice, bob, nodes, edges)
 
-        # setting 'w' for each actor
+        # update result for each actor
         alice_node = nodes[alice]
         alice_node['result_list'].append(wA)
         nodes[alice] = alice_node
@@ -129,6 +130,7 @@ def simulate_session_ch(channel:tuple, nodes, edges, lock:mp.Lock) -> None:
 
 def compute_previous_result(n:int, nodes, edges, lock:mp.Lock) -> None:
     '''This function computes previous result for current actor.'''
+    
     lock.acquire()
 
     try:
@@ -136,7 +138,8 @@ def compute_previous_result(n:int, nodes, edges, lock:mp.Lock) -> None:
             # actor participates at least in one dealogue
             ndialogues = len(nodes[n]['result_list'])
             w = np.zeros(nvars)
-            #!!!
+            
+            # change parameters set for current actor
             params = nodes[n]
 
             for wc in nodes[n]['result_list']:
@@ -286,16 +289,21 @@ if __name__ == '__main__':
 
             out_file.write("\n")
 
+    # create net
     net = nx.complete_graph(nactors)
 
+    # copy parameters for nodes
     for n in nodes:
         for p in nodes[n]:
             net.nodes[n][p] = nodes[n][p]
 
+    # copy parameters for edges
     for edge in edges:
         for p in edges[edge]:
             net.edges[edge][p] = edges[edge][p]
 
+            
+    # save model to file
     with open(net_output_path, 'wb') as f:
         pickle.dump(net, f)
 
