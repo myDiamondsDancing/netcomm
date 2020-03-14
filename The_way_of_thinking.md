@@ -118,6 +118,8 @@ nodes = manager.dict()
 edges = manager.dict()
 ```
 
+> I couldn't even change dicts in this lists, so to change parameters for channel or actor I copy his parameters set (dict) into  >variable, change it and then set parameters by appending this variable to list. 
+
 For using `Process()` I needed to transform all code snippets into functions. I began from setting parameters for each channel and actor:
 ```python
 def set_params_actor(n:int, nodes, lock:mp.Lock) -> None:
