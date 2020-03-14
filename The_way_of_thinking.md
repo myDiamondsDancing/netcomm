@@ -35,10 +35,11 @@ Also, I don't want to use `rg = np.random`. Look down:
 from numpy import random as rg
 ```
 
-`PEP8` says, that users should import standard library's modules before other ones. In that script, function `exit` from module `sys` was imported after `numpy`, `matplotlib` etc. Since I also need `JSON` and `multiprocessing` and don't need `sys` and `matplotlib`, my imports looks like this:
+`PEP8` says, that users should import standard library's modules before other ones. In that script, function `exit` from module `sys` was imported after `numpy`, `matplotlib` etc. Since I also need `JSON`, `pickle` and `multiprocessing` and don't need `sys` and `matplotlib`, my imports looks like this:
 
 ```python
 import json
+import pickle
 import multiprocessing as mp
 
 import numpy as np
@@ -252,7 +253,7 @@ def compute_previous_result(n:int, nodes, edges, lock:mp.Lock) -> None:
         lock.release()   
  ```
  
- So, then I defined function for simulating session, where I called this two functions with `Process()`:
+ So, then I defined function for simulating session, where I called these two functions with `Process()`:
  ```python
  def compute_previous_result(n:int, nodes, edges, lock:mp.Lock) -> None:
     '''This function computes previous result for current actor.'''
@@ -302,6 +303,180 @@ def simulate_session(nodes, edges) -> None:
     for proc in procs:
         proc.join()
   ```
+
+There is one code snippet in observation, which performed for each actor. I transormed it to separate function, called `pol_simulation`, which used `Bernoulli_trial`:
+```python
+def pol_simulation(n:int, nodes, lock:mp.Lock) -> None:
+    hn = h(nodes[n]['w'])
+
+    if Bernoulli_trial(np.power(hn, nodes[n]['rho'])):
+        # actor 'n' disclaims a choice
+        params = nodes[n]
+        params['choise'] = DISCLAIMER
+        nodes[n] = params
+    else:
+        # actor 'n' chooses
+        params = nodes[n]
+        params['choise'] = rg.choice(nvars, 
+                                     p=nodes[n]['w'])
+        nodes[n] = params
+```
+
+So, my function for observation looks like that:
+```python
+def observation(nodes, edges, lock:mp.Lock) -> tuple:
+
+    procs = list()
+    for n in nodes:
+        proc = mp.Process(target=pol_simulation, args=(n, nodes, lock))
+
+        procs.append(proc)
+        proc.start()
+
+    for proc in procs:
+        proc.join()
+
+
+    # compute average preference density
+    W = np.zeros(nvars)
+
+    for n in nodes:
+        np.add(W, nodes[n]['w'], W)
+
+    np.multiply(W, 1.0 / nactors, W)
+
+    # compute polling result
+    DP = len([1 for n in nodes if nodes[n]['choice'] == DISCLAIMER])
+
+    if DP == nactors:
+        # all community actors disclaimed a choice 
+        return W, 1.0, uncertainty(nvars)
+
+    NP = nactors - DP
+    WP = [None] * nvars
+
+    for v in range(nvars):
+        WP[v] = len([1 for n in nodes if nodes[n]['choice'] == v]) / NP
+
+    DP /= nactors
+    return W, DP, WP
+```
+In this function, I'm calling `pol_simulation` function with `Process()` and calculating the necessary values.
+
+It's time to set up the experiment!
+
+```python
+if __name__ == '__main__':
+
+    # multiprocessing manager
+    manager = mp.Manager()
+
+    # specify community net
+    nodes = manager.dict()
+    edges = manager.dict()
+
+    lock = mp.Lock()
+
+    # set parameters of community actors
+    procs = list()
+    for n in range(nactors):
+        proc = mp.Process(target=set_params_actor, args=(n, nodes, lock))
+
+        procs.append(proc)
+        proc.start()
+
+    for proc in procs:
+        proc.join()
+        
+
+    # set parameters of community channels
+    procs = list()
+    for i in range(nactors):
+        for j in range(i + 1, nactors):
+            proc = mp.Process(target=set_params_channel, args=((i, j), edges, lock))
+
+            procs.append(proc)
+            proc.start()
+
+    for proc in procs:
+        proc.join()
+
+
+    # set up the experiment
+    protocol = [observation(nodes, edges, lock)]
+    for istep in range(niter):
+        simulate_session(nodes, edges)
+        protocol.append(observation(nodes, edges, lock))
+```
+Then, I need to write result to file (I told about that above):
+```python
+    with open(output_path, "w") as out_file:
+        # out_file.write(str(nvars) + "\n")
+
+        for item in protocol:
+            for val in item[0]:
+                out_file.write(str(val) + " ")
+
+            out_file.write(str(item[1]))
+
+            for val in item[2]:
+                out_file.write(" " + str(val))
+
+            out_file.write("\n")
+```
+
+## Control script with JSON-file
+
+I don't like defining variables with important values in this script, like `niters` or `output_path`. So, I decided to creare JSON-file with next fields:
+* nactors
+* niter
+* nvars
+* output_path
+* net_output_path
+
+In the beggining of this script, I'm opening this file and loading all values I need:
+```python
+# loading nvars, nactors, niter etc.
+with open('config.json', 'r') as f:
+    config = json.load(f)
+
+nvars = config['nvars']
+nactors = config['nactors']
+niter = config['niter']
+output_path = config['output_path']
+
+# we already don't need this dict 
+del config
+```
+
+## Creating NetworkX graph
+
+It is important to create NetworkX model for further work. So, script creates complete graph with number of nodes equal to nactors and copies every field in parameters set in `nodes` and `edges` to `net.nodes` and `net.edges`:
+```python
+    net = nx.complete_graph(nactors)
+
+    for n in nodes:
+        for p in nodes[n]:
+            net.nodes[n][p] = nodes[n][p]
+
+    for edge in edges:
+        for p in edges[edge]:
+            net.edges[edge][p] = edges[edge][p]
+```
+Also, script saves this net to file, `using pickle.dump`:
+```python
+    with open(net_output_path, 'wb') as f:
+        pickle.dump(net, f)
+```
+
+## Conclusion
+
+How you can see, I modified script for using multiprocessing. Also, I created docstring for each function, fixes some code problems and realised some new things.
+
+Thanks for attention, mydiamondsdancing.
+
+
+
 
 
 
