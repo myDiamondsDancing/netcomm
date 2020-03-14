@@ -118,7 +118,7 @@ nodes = manager.dict()
 edges = manager.dict()
 ```
 
-> I couldn't even change dicts in this lists, so to change parameters for channel or actor I copy his parameters set (dict) into  >variable, change it and then set parameters by appending this variable to list. 
+> I couldn't even change dicts in this lists, so to change parameters for channel or actor I copy its parameters set (dict) into variable, change it and then set parameters by appending this variable to list. 
 
 For using `Process()` I needed to transform all code snippets into functions. I began from setting parameters for each channel and actor:
 ```python
@@ -193,6 +193,115 @@ def simulate_dialog(alice:int, bob:int, nodes, edges) -> tuple:
 
     return wA_result, wB_result
 ```
+
+Then I defined two functions, used in simulating session. These are simulating session for current channel and computing previous results for each actor:
+```python
+def simulate_session_ch(channel:tuple, nodes, edges, lock:mp.Lock) -> None:
+    '''This function simulates session for current channel.'''
+    lock.acquire()
+
+    try:
+        # clean auxiliary information
+        for actor in channel:
+            params = nodes[actor]
+            params['result_list'] = list()
+            nodes[actor] = params
+
+        # simulate dialogue
+        if not Bernoulli_trial(edges[channel]['a']):
+            # channel is not active
+            return 
+
+        # channel is active
+        # determine actors participating as Alice and Bob in the dialogue
+        alice, bob = channel
+
+        # simulated dialog
+        wA, wB = simulate_dialog(alice, bob, nodes, edges)
+
+        # setting 'w' for each actor
+        alice_node = nodes[alice]
+        alice_node['result_list'].append(wA)
+        nodes[alice] = alice_node
+
+        bob_node = nodes[bob]
+        bob_node['result_list'].append(wA)
+        nodes[bob]= bob_node
+    finally:
+        lock.release()
+
+
+def compute_previous_result(n:int, nodes, edges, lock:mp.Lock) -> None:
+    '''This function computes previous result for current actor.'''
+    lock.acquire()
+
+    try:
+        if nodes[n]['result_list']:
+            # actor participates at least in one dealogue
+            ndialogues = len(nodes[n]['result_list'])
+            w = np.zeros(nvars)
+            #!!!
+            params = nodes[n]
+
+            for wc in nodes[n]['result_list']:
+                np.add(w, wc, w)
+                np.multiply(w, 1.0 / ndialogues, params['w']) 
+
+            nodes[n] = params  
+    finally:
+        lock.release()   
+ ```
+ 
+ So, then I defined function for simulating session, where I called this two functions with `Process()`:
+ ```python
+ def compute_previous_result(n:int, nodes, edges, lock:mp.Lock) -> None:
+    '''This function computes previous result for current actor.'''
+    lock.acquire()
+
+    try:
+        if nodes[n]['result_list']:
+            # actor participates at least in one dealogue
+            ndialogues = len(nodes[n]['result_list'])
+            w = np.zeros(nvars)
+            #!!!
+            params = nodes[n]
+
+            for wc in nodes[n]['result_list']:
+                np.add(w, wc, w)
+                np.multiply(w, 1.0 / ndialogues, params['w']) 
+
+            nodes[n] = params  
+    finally:
+        lock.release()   
+
+
+def simulate_session(nodes, edges) -> None:
+    '''This function simulates session.'''
+
+    lock = mp.Lock()
+
+    procs = list()
+    for channel in edges:
+        proc = mp.Process(target=simulate_session_ch, args=(channel, nodes, edges, lock))
+
+        procs.append(proc)
+        proc.start()
+
+    for proc in procs:
+        proc.join()
+
+
+    procs = list()
+    # compute the previous session result for each community actor
+    for n in nodes:
+        proc = mp.Process(target=compute_previous_result, args=(n, nodes, edges, lock))
+
+        procs.append(proc)
+        proc.start()
+
+    for proc in procs:
+        proc.join()
+  ```
 
 
 
