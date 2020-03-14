@@ -264,8 +264,6 @@ if __name__ == '__main__':
         proc.join()
 
 
-    niter = 10  # define number of iterations
-
     # set up the experiment
     protocol = [observation(nodes, edges, lock)]
     for istep in range(niter):
