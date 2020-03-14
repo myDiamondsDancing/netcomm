@@ -255,27 +255,6 @@ def compute_previous_result(n:int, nodes, edges, lock:mp.Lock) -> None:
  
  Further I defined function for simulating session, where I called these two functions with `Process()`:
  ```python
- def compute_previous_result(n:int, nodes, edges, lock:mp.Lock) -> None:
-    '''This function computes previous result for current actor.'''
-    lock.acquire()
-
-    try:
-        if nodes[n]['result_list']:
-            # actor participates at least in one dealogue
-            ndialogues = len(nodes[n]['result_list'])
-            w = np.zeros(nvars)
-            #!!!
-            params = nodes[n]
-
-            for wc in nodes[n]['result_list']:
-                np.add(w, wc, w)
-                np.multiply(w, 1.0 / ndialogues, params['w']) 
-
-            nodes[n] = params  
-    finally:
-        lock.release()   
-
-
 def simulate_session(nodes, edges) -> None:
     '''This function simulates session.'''
 
@@ -463,7 +442,7 @@ It is important to create NetworkX model for further work. So, script creates co
         for p in edges[edge]:
             net.edges[edge][p] = edges[edge][p]
 ```
-Also, script saves this net to file, `using pickle.dump`:
+Also, script saves this net to file, using `pickle.dump`:
 ```python
     with open(net_output_path, 'wb') as f:
         pickle.dump(net, f)
@@ -471,13 +450,6 @@ Also, script saves this net to file, `using pickle.dump`:
 
 ## Conclusion
 
-How you can see, I modified script for using multiprocessing. Also, I created docstring for each function, fixes some code problems and realised some new things.
+How you can see, I modified script for using multiprocessing. Also, I created docstring for each function, fixed some code problems and realised some new things.
 
 Thanks for attention, mydiamondsdancing.
-
-
-
-
-
-
-
