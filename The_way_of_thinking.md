@@ -1,4 +1,4 @@
-# My updating for [gzholtkevych/netcomm](https://github.com/gzholtkevych/netcomm)
+# My update for [gzholtkevych/netcomm](https://github.com/gzholtkevych/netcomm)
 
 * My Python version is
 * My Numpy version is 1.16.4
