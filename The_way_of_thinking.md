@@ -1,6 +1,6 @@
 # My update for [gzholtkevych/netcomm](https://github.com/gzholtkevych/netcomm)
 
-* My Python version is
+* My Python version is 3.7.3
 * My Numpy version is 1.16.4
 * My NetworkX version is 2.4
 
